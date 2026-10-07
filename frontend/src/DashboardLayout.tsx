@@ -51,6 +51,8 @@ export default function DashboardLayout({
   onNavigate,
   onLogout,
 }: DashboardLayoutProps) {
+  const warName = sessionStorage.getItem("atlas:nome-guerra") ?? "Usuário";
+
   function navigate(event: MouseEvent<HTMLAnchorElement>, page: DashboardPage) {
     event.preventDefault();
     onNavigate(page);
@@ -84,9 +86,9 @@ export default function DashboardLayout({
         </nav>
 
         <div className="sidebar-account">
-          <div className="avatar" aria-hidden="true">{initials(email)}</div>
+          <div className="avatar" aria-hidden="true">{initials(warName)}</div>
           <div className="account-copy">
-            <strong>{email.split("@")[0] || "Usuário"}</strong>
+            <strong>{warName}</strong>
             <span>{email || "Sessão ativa"}</span>
           </div>
           <button className="logout-button" type="button" onClick={onLogout} aria-label="Sair do Atlas" title="Sair">

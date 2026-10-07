@@ -75,10 +75,13 @@ export default function App() {
     setMessage("");
 
     try {
-      await login({ gmail: email.trim(), senha: password });
+      const response = await login({ gmail: email.trim(), senha: password });
       const normalizedEmail = email.trim();
       sessionStorage.setItem("atlas:authenticated", "true");
       sessionStorage.setItem("atlas:email", normalizedEmail);
+      if (response.usuario?.nome_guerra) {
+        sessionStorage.setItem("atlas:nome-guerra", response.usuario.nome_guerra);
+      }
       setSessionEmail(normalizedEmail);
       setPassword("");
       setStatus("idle");
@@ -93,6 +96,7 @@ export default function App() {
   function logout() {
     sessionStorage.removeItem("atlas:authenticated");
     sessionStorage.removeItem("atlas:email");
+    sessionStorage.removeItem("atlas:nome-guerra");
     setSessionEmail("");
     setPassword("");
     setStatus("idle");

@@ -3,8 +3,18 @@ export type LoginCredentials = {
   senha: string;
 };
 
+export type CreateLoginCredentials = LoginCredentials & {
+  nome_guerra: string;
+};
+
 type LoginResponse = {
   mensagem: string;
+  usuario?: {
+    id_user: number;
+    nome_completo: string;
+    nome_guerra: string;
+    tipo_user: string;
+  } | null;
 };
 
 type ApiError = {
@@ -55,4 +65,30 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
   }
 
   return payload ?? { mensagem: "Login realizado com sucesso" };
+}
+
+export async function createUserLogin(credentials: CreateLoginCredentials): Promise<LoginResponse> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}/login/criar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(credentials),
+    });
+  } catch {
+    throw new Error("Não foi possível conectar ao serviço de login.");
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | (LoginResponse & ApiError)
+    | null;
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(payload, response.status));
+  }
+
+  return payload ?? { mensagem: "Login cadastrado com sucesso" };
 }
