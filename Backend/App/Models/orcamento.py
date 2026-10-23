@@ -1,6 +1,6 @@
 # importações
 from datetime import datetime
-from sqlalchemy import String, DateTime, Integer, numeric
+from sqlalchemy import String, DateTime, Integer, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 
 # Pastas
@@ -11,5 +11,5 @@ class orcamento(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key = True, autoincrement=True)
     nome : Mapped[str] = mapped_column(String(255), nullable = False)
-    valor: Mapped[float] = mapped_column(numeric(10, 2), nullable = False)
+    valor: Mapped[float] = mapped_column(Numeric(10, 2), nullable = False)
     data_alteracao: Mapped[datetime | None] = mapped_column(DateTime,nullable=True)

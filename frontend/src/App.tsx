@@ -1,7 +1,10 @@
 import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { login } from "./api/auth";
+import Budget from "./Budget";
+import Calendar from "./Calendar";
 import { DashboardPage } from "./DashboardLayout";
 import Home from "./Home";
+import Missions from "./Missions";
 import Users from "./Users";
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -28,6 +31,9 @@ export default function App() {
   const [page, setPage] = useState<"login" | DashboardPage>(() => {
     if (!hasSession) return "login";
     if (window.location.pathname === "/usuarios") return "users";
+    if (window.location.pathname === "/orcamento") return "budget";
+    if (window.location.pathname === "/missoes") return "missions";
+    if (window.location.pathname === "/calendario") return "calendar";
     return window.location.pathname === "/home" ? "home" : "login";
   });
   const [sessionEmail, setSessionEmail] = useState(sessionStorage.getItem("atlas:email") ?? "");
@@ -35,7 +41,7 @@ export default function App() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const isProtectedPath = ["/home", "/usuarios"].includes(window.location.pathname);
+    const isProtectedPath = ["/home", "/usuarios", "/orcamento", "/missoes", "/calendario"].includes(window.location.pathname);
     if (isProtectedPath && !hasSession) {
       window.history.replaceState({}, "", "/");
     }
@@ -46,6 +52,12 @@ export default function App() {
         setPage("login");
       } else if (window.location.pathname === "/usuarios") {
         setPage("users");
+      } else if (window.location.pathname === "/orcamento") {
+        setPage("budget");
+      } else if (window.location.pathname === "/missoes") {
+        setPage("missions");
+      } else if (window.location.pathname === "/calendario") {
+        setPage("calendar");
       } else {
         setPage(window.location.pathname === "/home" ? "home" : "login");
       }
@@ -107,7 +119,14 @@ export default function App() {
   }
 
   function navigate(page: DashboardPage) {
-    const path = page === "users" ? "/usuarios" : "/home";
+    const paths: Record<DashboardPage, string> = {
+      home: "/home",
+      users: "/usuarios",
+      budget: "/orcamento",
+      missions: "/missoes",
+      calendar: "/calendario",
+    };
+    const path = paths[page];
     window.history.pushState({}, "", path);
     setPage(page);
   }
@@ -118,6 +137,18 @@ export default function App() {
 
   if (page === "users") {
     return <Users email={sessionEmail} onNavigate={navigate} onLogout={logout} />;
+  }
+
+  if (page === "budget") {
+    return <Budget email={sessionEmail} onNavigate={navigate} onLogout={logout} />;
+  }
+
+  if (page === "missions") {
+    return <Missions email={sessionEmail} onNavigate={navigate} onLogout={logout} />;
+  }
+
+  if (page === "calendar") {
+    return <Calendar email={sessionEmail} onNavigate={navigate} onLogout={logout} />;
   }
 
   return (

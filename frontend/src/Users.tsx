@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import DashboardLayout, { DashboardPage } from "./DashboardLayout";
 import { createUserLogin } from "./api/auth";
-import { createUser, CreateUserInput, listUsers, User } from "./api/users";
+import { createUser, CreateUserInput, listUsers, updateUser, User } from "./api/users";
 
 type UsersProps = {
   email: string;
@@ -33,6 +33,10 @@ function CloseIcon() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>;
 }
 
+function EditIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 20 4.2-1 10.4-10.4a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /><path d="m13.8 7.4 3 3" stroke="currentColor" strokeWidth="1.7" /></svg>;
+}
+
 function FieldMessage({ message }: { message?: string }) {
   return message ? <small className="field-validation">{message}</small> : null;
 }
@@ -42,12 +46,17 @@ function userInitials(user: User) {
   return `${names[0]?.[0] ?? "U"}${names[1]?.[0] ?? names[0]?.[1] ?? ""}`.toUpperCase();
 }
 
+function isAdministrator(profile: string) {
+  return profile.toLocaleLowerCase("pt-BR").includes("admin");
+}
+
 export default function Users({ email, onNavigate, onLogout }: UsersProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form, setForm] = useState<CreateUserInput>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
@@ -97,7 +106,8 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
     clearFieldError(String(field));
   }
 
-  function openModal() {
+  function openCreateModal() {
+    setEditingUser(null);
     setForm(emptyForm);
     setFormError("");
     setFieldErrors({});
@@ -106,7 +116,30 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
     setModalOpen(true);
   }
 
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
+  function openEditModal(user: User) {
+    setEditingUser(user);
+    setForm({
+      nome_completo: user.nome_completo,
+      nome_guerra: user.nome_guerra,
+      posto: user.posto,
+      especialidade: user.especialidade ?? "",
+      unidade: user.unidade,
+      cpf: user.cpf,
+      saram: user.saram,
+      tipo_user: isAdministrator(user.tipo_user) ? "administrador" : "usuario",
+      ativo: user.ativo,
+    });
+    setFormError("");
+    setFieldErrors({});
+    setAccessEmail("");
+    setAccessPassword("");
+    setModalOpen(true);
+  }
+
+  const shouldCreateAccess = isAdministrator(form.tipo_user)
+    && (!editingUser || !isAdministrator(editingUser.tipo_user));
+
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
     setFieldErrors({});
@@ -121,7 +154,7 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
     if (cleanCpf.length !== 11) errors.cpf = "O CPF deve conter 11 números.";
     if (!form.saram.trim()) errors.saram = "Informe o SARAM.";
 
-    if (form.tipo_user === "administrador") {
+    if (shouldCreateAccess) {
       if (!/^\S+@\S+\.\S+$/.test(accessEmail.trim())) errors.accessEmail = "Informe um e-mail válido.";
       if (accessPassword.length < 6) errors.accessPassword = "A senha deve ter pelo menos 6 caracteres.";
     }
@@ -133,11 +166,10 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
     }
 
     setSaving(true);
-    let userCreated = false;
-    const shouldCreateAccess = form.tipo_user === "administrador";
+    let userSaved = false;
 
     try {
-      const response = await createUser({
+      const payload: CreateUserInput = {
         ...form,
         nome_completo: form.nome_completo.trim(),
         nome_guerra: form.nome_guerra.trim(),
@@ -147,8 +179,12 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
         cpf: cleanCpf,
         saram: form.saram.trim(),
         tipo_user: form.tipo_user.trim(),
-      });
-      userCreated = true;
+      };
+
+      const response = editingUser
+        ? await updateUser(editingUser.id_user, payload)
+        : await createUser(payload);
+      userSaved = true;
 
       if (shouldCreateAccess) {
         await createUserLogin({
@@ -160,17 +196,19 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
 
       setModalOpen(false);
       setNotice({
-        message: shouldCreateAccess ? "Administrador e login cadastrados com sucesso!" : response.mensagem,
+        message: shouldCreateAccess
+          ? `${editingUser ? "Administrador atualizado" : "Administrador cadastrado"} e login criado com sucesso!`
+          : response.mensagem,
         type: "success",
       });
       await loadUsers();
       window.setTimeout(() => setNotice(null), 5000);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Não foi possível cadastrar o usuário.";
+      const errorMessage = error instanceof Error ? error.message : "Não foi possível salvar o usuário.";
 
-      if (userCreated) {
+      if (userSaved) {
         setModalOpen(false);
-        setNotice({ message: `Usuário cadastrado, mas o login não foi criado: ${errorMessage}`, type: "warning" });
+        setNotice({ message: `Usuário ${editingUser ? "atualizado" : "cadastrado"}, mas o login não foi criado: ${errorMessage}`, type: "warning" });
         await loadUsers();
         window.setTimeout(() => setNotice(null), 7000);
       } else {
@@ -187,9 +225,8 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
         <header className="users-header">
           <div>
             <h1>Usuários</h1>
-            <p>Gerencie as pessoas com acesso ao Atlas.</p>
           </div>
-          <button className="primary-action" type="button" onClick={openModal}>
+          <button className="primary-action" type="button" onClick={openCreateModal}>
             <PlusIcon />
             Novo usuário
           </button>
@@ -244,6 +281,7 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
                     <th>Unidade</th>
                     <th>Perfil</th>
                     <th>Status</th>
+                    <th className="table-actions-column">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -258,8 +296,19 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
                       <td className="war-name war-name-column">{user.nome_guerra}</td>
                       <td>{user.posto}</td>
                       <td>{user.unidade}</td>
-                      <td><span className="profile-tag">{user.tipo_user}</span></td>
+                      <td><span className={`profile-tag ${isAdministrator(user.tipo_user) ? "profile-tag-admin" : "profile-tag-user"}`}>{user.tipo_user}</span></td>
                       <td><span className={`user-status ${user.ativo ? "is-active" : "is-inactive"}`}><i />{user.ativo ? "Ativo" : "Inativo"}</span></td>
+                      <td className="table-actions-column">
+                        <button
+                          className="edit-user-button"
+                          type="button"
+                          onClick={() => openEditModal(user)}
+                          aria-label={`Editar ${user.nome_guerra}`}
+                          title="Editar usuário"
+                        >
+                          <EditIcon />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -272,13 +321,16 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
 
         {modalOpen && (
           <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setModalOpen(false)}>
-            <section className="user-modal" role="dialog" aria-modal="true" aria-labelledby="new-user-title">
+            <section className="user-modal" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
               <header className="modal-header">
-                <div><h2 id="new-user-title">Novo usuário</h2><p>Preencha os dados institucionais.</p></div>
+                <div>
+                  <h2 id="user-modal-title">{editingUser ? "Editar usuário" : "Novo usuário"}</h2>
+                  <p>{editingUser ? "Atualize os dados institucionais." : "Preencha os dados institucionais."}</p>
+                </div>
                 <button type="button" onClick={() => setModalOpen(false)} aria-label="Fechar"><CloseIcon /></button>
               </header>
 
-              <form className="user-form" onSubmit={handleCreate} noValidate>
+              <form className="user-form" onSubmit={handleSave} noValidate>
                 <label className={`form-field form-field-wide ${fieldErrors.nome_completo ? "has-error" : ""}`}>
                   Nome completo
                   <input value={form.nome_completo} onChange={(e) => updateField("nome_completo", e.target.value)} aria-invalid={Boolean(fieldErrors.nome_completo)} />
@@ -319,7 +371,7 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
                 }}><option value="usuario">Usuário</option><option value="administrador">Administrador</option></select></label>
                 <label className="active-field"><input type="checkbox" checked={form.ativo} onChange={(e) => updateField("ativo", e.target.checked)} /><span />Usuário ativo</label>
 
-                {form.tipo_user === "administrador" && (
+                {shouldCreateAccess && (
                   <div className="login-credentials form-field-wide">
                     <div className="login-credentials-heading">
                       <strong>Login de acesso</strong>
@@ -342,7 +394,7 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
 
                 <footer className="modal-actions">
                   <button className="cancel-action" type="button" onClick={() => setModalOpen(false)}>Cancelar</button>
-                  <button className="primary-action" type="submit" disabled={saving}>{saving ? <span className="spinner" /> : "Cadastrar usuário"}</button>
+                  <button className="primary-action" type="submit" disabled={saving}>{saving ? <span className="spinner" /> : editingUser ? "Salvar alterações" : "Cadastrar usuário"}</button>
                 </footer>
               </form>
             </section>

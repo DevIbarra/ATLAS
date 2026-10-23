@@ -61,3 +61,19 @@ export async function createUser(data: CreateUserInput): Promise<{ mensagem: str
 
   return parseResponse<{ mensagem: string }>(response);
 }
+
+export async function updateUser(id: number, data: CreateUserInput): Promise<{ mensagem: string; usuario: User }> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${USERS_URL}/atualizar/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  } catch {
+    throw new Error("Não foi possível conectar ao serviço de usuários.");
+  }
+
+  return parseResponse<{ mensagem: string; usuario: User }>(response);
+}
