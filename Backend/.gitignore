@@ -12,6 +12,3 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Testes
-/tests/

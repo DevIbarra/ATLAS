@@ -3,12 +3,11 @@
 .env.*
 !.env.example
 
-
 # Dependências
 node_modules/
 
 # Build
 dist/
 
-# Testes (não versionar)
-/tests/
+# Logs
+*.log
