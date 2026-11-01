@@ -36,7 +36,7 @@ Substitua os valores pelos dados do seu ambiente. A porta padrão é `5432` caso
 
 ## Banco de dados
 
-Na inicialização, a API cria a tabela `missoes` se ela não existir, adiciona a coluna `situacao` quando necessário e normaliza dados de missões canceladas ou de custo zero. Esse processo não cria nem atualiza automaticamente as tabelas `usuarios`, `login` e `orcamento`.
+Na inicialização, a API cria a tabela `missoes` se ela não existir, adiciona a coluna `situacao` quando necessário e normaliza dados de missões canceladas ou de custo zero. Se a tabela `usuarios` existir, também adiciona a coluna `diarias_possuidas` quando necessário, com valor inicial zero e sem aceitar valores nulos. No PostgreSQL, valores nulos preexistentes nessa coluna são convertidos para zero antes de aplicar a restrição. Esse processo não cria as tabelas `usuarios`, `login` e `orcamento` nem realiza outras atualizações gerais de esquema.
 
 Para um **banco novo e vazio**, após configurar o `.env`, é possível criar as tabelas a partir dos modelos atuais:
 

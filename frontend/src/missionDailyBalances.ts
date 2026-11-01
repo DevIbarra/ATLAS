@@ -14,6 +14,11 @@ export type MissionDailyBalance = {
   total: number | null;
 };
 
+export type UserDailyBalance = {
+  nome_guerra: string;
+  diarias_possuidas: number;
+};
+
 function personKey(name: string | null) {
   return (name ?? "").normalize("NFC").trim().replace(/\s+/g, " ").toLocaleUpperCase("pt-BR");
 }
@@ -35,9 +40,20 @@ function compareMissions(left: MissionDailyRecord, right: MissionDailyRecord) {
   return left.data_missao.localeCompare(right.data_missao) || left.id_missao - right.id_missao;
 }
 
-export function getMissionDailyBalances(missions: readonly MissionDailyRecord[]) {
+export function getMissionDailyBalances(missions: readonly MissionDailyRecord[], users: readonly UserDailyBalance[] = []) {
   const balances = new Map<number, MissionDailyBalance>();
   const totalsByPerson = new Map<string, number | null>();
+
+  for (const user of users) {
+    const person = personKey(user.nome_guerra);
+    if (!person) continue;
+    const amount = user.diarias_possuidas;
+    if (totalsByPerson.has(person) || !Number.isSafeInteger(amount) || amount < 0) {
+      totalsByPerson.set(person, null);
+    } else {
+      totalsByPerson.set(person, amount);
+    }
+  }
 
   for (const mission of [...missions].sort(compareMissions)) {
     const person = personKey(mission.militar_civil);

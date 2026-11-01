@@ -19,6 +19,7 @@ const emptyForm: CreateUserInput = {
   saram: "",
   tipo_user: "usuario",
   ativo: true,
+  diarias_possuidas: 0,
 };
 
 function SearchIcon() {
@@ -67,6 +68,7 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [accessEmail, setAccessEmail] = useState("");
   const [accessPassword, setAccessPassword] = useState("");
+  const [ownedDailies, setOwnedDailies] = useState("0");
   const [notice, setNotice] = useState<{ message: string; type: "success" | "warning" } | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState("");
@@ -128,6 +130,7 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
     setFieldErrors({});
     setAccessEmail("");
     setAccessPassword("");
+    setOwnedDailies("0");
     setModalOpen(true);
   }
 
@@ -143,11 +146,13 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
       saram: user.saram,
       tipo_user: isAdministrator(user.tipo_user) ? "administrador" : "usuario",
       ativo: user.ativo,
+      diarias_possuidas: user.diarias_possuidas ?? 0,
     });
     setFormError("");
     setFieldErrors({});
     setAccessEmail("");
     setAccessPassword("");
+    setOwnedDailies(String(user.diarias_possuidas ?? 0));
     setModalOpen(true);
   }
 
@@ -168,6 +173,9 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
     if (!form.unidade.trim()) errors.unidade = "Informe a unidade.";
     if (cleanCpf.length !== 11) errors.cpf = "O CPF deve conter 11 números.";
     if (!form.saram.trim()) errors.saram = "Informe o SARAM.";
+    if (!/^\d+$/.test(ownedDailies) || Number(ownedDailies) > 2147483647) {
+      errors.diarias_possuidas = "Informe uma quantidade inteira de diárias a partir de zero.";
+    }
 
     if (shouldCreateAccess) {
       if (!/^\S+@\S+\.\S+$/.test(accessEmail.trim())) errors.accessEmail = "Informe um e-mail válido.";
@@ -194,6 +202,7 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
         cpf: cleanCpf,
         saram: form.saram.trim(),
         tipo_user: form.tipo_user.trim(),
+        diarias_possuidas: Number(ownedDailies),
       };
 
       const response = editingUser
@@ -392,7 +401,7 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
 
         {modalOpen && (
           <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setModalOpen(false)}>
-            <section className="user-modal" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
+            <section className="user-modal user-edit-modal" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
               <header className="modal-header">
                 <div>
                   <h2 id="user-modal-title">{editingUser ? "Editar usuário" : "Novo usuário"}</h2>
@@ -432,6 +441,11 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
                   SARAM
                   <input maxLength={10} value={form.saram} onChange={(e) => updateField("saram", e.target.value)} aria-invalid={Boolean(fieldErrors.saram)} />
                   <FieldMessage message={fieldErrors.saram} />
+                </label>
+                <label className={`form-field ${fieldErrors.diarias_possuidas ? "has-error" : ""}`}>
+                  Diárias adiquiridas
+                  <input inputMode="numeric" value={ownedDailies} onChange={(e) => { setOwnedDailies(e.target.value); clearFieldError("diarias_possuidas"); }} aria-invalid={Boolean(fieldErrors.diarias_possuidas)} />
+                  <FieldMessage message={fieldErrors.diarias_possuidas} />
                 </label>
                 <label className="form-field">Perfil<select value={form.tipo_user} onChange={(e) => {
                   updateField("tipo_user", e.target.value);

@@ -9,6 +9,7 @@ export type User = {
   saram: string;
   tipo_user: string;
   ativo: boolean;
+  diarias_possuidas: number;
   creation_dt?: string | null;
 };
 

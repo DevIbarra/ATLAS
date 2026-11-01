@@ -1837,6 +1837,31 @@ form {
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
 }
 
+.user-edit-modal {
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  scrollbar-color: #4b4c56 var(--surface);
+  scrollbar-width: thin;
+}
+
+.user-edit-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.user-edit-modal::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+.user-edit-modal::-webkit-scrollbar-thumb {
+  border: 2px solid var(--surface);
+  border-radius: 8px;
+  background: #4b4c56;
+}
+
+.user-edit-modal::-webkit-scrollbar-thumb:hover {
+  background: #686a76;
+}
+
 .delete-user-dialog {
   width: min(380px, calc(100% - 32px));
   max-height: calc(100% - 32px);

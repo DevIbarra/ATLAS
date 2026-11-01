@@ -155,7 +155,7 @@ function normalizeMissionSearch(value: string | null | undefined) {
 
 export default function Missions({ email, onNavigate, onLogout }: MissionsProps) {
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState("");
   const [query, setQuery] = useState("");
@@ -184,7 +184,8 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
   }, [missionToDelete]);
 
   const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-  const dailyBalances = useMemo(() => getMissionDailyBalances(missions), [missions]);
+  const availableUsers = useMemo(() => users.filter((user) => user.ativo), [users]);
+  const dailyBalances = useMemo(() => getMissionDailyBalances(missions, users), [missions, users]);
   const filteredMissions = useMemo(() => {
     const term = normalizeMissionSearch(query);
     return missions.filter((mission) => {
@@ -221,7 +222,7 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
     setUsersLoading(true);
     setUsersError("");
     try {
-      setAvailableUsers((await listUsers()).filter((user) => user.ativo));
+      setUsers(await listUsers());
     } catch {
       setUsersError("Não foi possível carregar os usuários.");
     } finally {
@@ -389,6 +390,8 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
             </div>
           </div>
 
+          {usersError && <div className="users-feedback error-feedback" role="alert"><span>Não foi possível carregar as diárias dos usuários.</span><button type="button" onClick={() => void loadAvailableUsers()}>Tentar novamente</button></div>}
+
           {loading ? (
             <div className="users-loading"><span className="spinner" />Carregando missões...</div>
           ) : loadError ? (
@@ -398,7 +401,7 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
           ) : (
             <div className="users-table-wrap">
               <table className="users-table missions-table">
-                <thead><tr><th>Nº OS</th><th>Nome de guerra</th><th>Nº PCDP</th><th>Diária da missão</th><th title="Diárias da pessoa nas missões anteriores, somadas às desta missão.">Diárias anual</th><th>Valor</th><th>Data da missão</th><th className="table-actions-column">Ações</th></tr></thead>
+                <thead><tr><th>Nº OS</th><th>Nome de guerra</th><th>Nº PCDP</th><th>Diária da missão</th><th title="Diárias adquiridas no cadastro somadas às missões anteriores, sem incluir esta missão.">Diárias anual</th><th>Valor</th><th>Data da missão</th><th className="table-actions-column">Ações</th></tr></thead>
                 <tbody>{filteredMissions.map((mission) => {
                   const balance = dailyBalances.get(mission.id_missao);
                   return (
@@ -407,7 +410,7 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
                       <td>{mission.militar_civil || "—"}</td>
                       <td>{mission.numero_pcdp || "—"}</td>
                       <td>{mission.diarias || "—"}</td>
-                      <td>{formatDailyAmount(balance?.total)}</td>
+                      <td title={balance?.previous == null && !usersLoading && !usersError ? "Não foi possível calcular as diárias; verifique o nome de guerra e os valores cadastrados." : undefined}>{formatDailyAmount(usersLoading || usersError ? null : balance?.previous)}</td>
                       <td className="mission-value">{mission.situacao === "cancelada" ? "—" : mission.valor == null && mission.situacao !== "custo_zero" ? "—" : currency.format(getMissionExpense(mission))}</td>
                       <td>{formatDate(mission.data_missao)}</td>
                       <td className="table-actions-column">

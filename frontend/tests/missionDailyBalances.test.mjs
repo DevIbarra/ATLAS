@@ -26,6 +26,38 @@ function mission(id, date, amount, person = "IBARRA") {
   return { id_missao: id, data_missao: date, diarias: amount, militar_civil: person };
 }
 
+test("diárias anteriores não incluem a missão atual e aparecem na próxima", () => {
+  const missions = [mission(1, "2026-10-09", "5"), mission(2, "2026-10-20", "3")];
+  const zero = getMissionDailyBalances(missions, [{ nome_guerra: "IBARRA", diarias_possuidas: 0 }]);
+  assert.equal(zero.get(1).previous, 0);
+  assert.equal(zero.get(2).previous, 5);
+
+  const dez = getMissionDailyBalances(missions, [{ nome_guerra: "IBARRA", diarias_possuidas: 10 }]);
+  assert.equal(dez.get(1).previous, 10);
+  assert.equal(dez.get(2).previous, 15);
+});
+
+test("soma as diárias adquiridas no cadastro ao histórico de missões", () => {
+  const users = [
+    { nome_guerra: "  ibarra ", diarias_possuidas: 10 },
+    { nome_guerra: "SILVA", diarias_possuidas: 20, ativo: false },
+  ];
+  const missions = [mission(1, "2026-10-09", "3"), mission(2, "2026-10-20", "2,5"), mission(3, "2026-10-21", "1", "silva")];
+  const balances = getMissionDailyBalances(missions, users);
+  assert.deepEqual(balances.get(1), { previous: 10, current: 3, total: 13 });
+  assert.deepEqual(balances.get(2), { previous: 13, current: 2.5, total: 15.5 });
+  assert.equal(balances.get(3).total, 21);
+  assert.equal(getMissionDailyBalances(missions, [{ ...users[0], diarias_possuidas: 5 }]).get(1).total, 8);
+});
+
+test("não escolhe arbitrariamente um usuário com nome de guerra duplicado ou diárias inválidas", () => {
+  const missions = [mission(1, "2026-10-09", "3"), mission(2, "2026-10-10", "2")];
+  const duplicated = [{ nome_guerra: "IBARRA", diarias_possuidas: 10 }, { nome_guerra: " ibarra ", diarias_possuidas: 20 }];
+  assert.equal(getMissionDailyBalances(missions, duplicated).get(2).total, null);
+  assert.equal(getMissionDailyBalances(missions, [{ nome_guerra: "IBARRA", diarias_possuidas: null }]).get(1).total, null);
+  assert.equal(getMissionDailyBalances(missions, []).get(1).total, 3);
+});
+
 test("soma somente as missões anteriores da mesma pessoa, pela data da missão", () => {
   const missions = [
     mission(1, "2026-10-20", "3"),

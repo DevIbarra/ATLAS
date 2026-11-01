@@ -23,3 +23,4 @@ class usuarios(Base):
     ativo: Mapped[bool | None] = mapped_column(Boolean, server_default="false")
     creation_dt: Mapped[datetime | None] = mapped_column(DateTime,server_default=func.now())
     update_at: Mapped[datetime | None] = mapped_column(DateTime,nullable=True)
+    diarias_possuidas: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")

@@ -11,6 +11,7 @@ class CreateUsuarioRequest(BaseModel):
     saram: str = Field(max_length=10)
     tipo_user: str
     ativo: bool = False
+    diarias_possuidas: int = Field(default=0, ge=0, le=2147483647)
 
 class UpdateUsuarioRequest(BaseModel):
     nome_completo: str | None = None
@@ -22,3 +23,4 @@ class UpdateUsuarioRequest(BaseModel):
     saram: str | None = Field(default=None, max_length=10)
     tipo_user: str | None = None
     ativo: bool | None = None
+    diarias_possuidas: int = Field(default=0, ge=0, le=2147483647)
