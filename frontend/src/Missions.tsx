@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout, { DashboardPage } from "./DashboardLayout";
 import { createMission, deleteMission, listMissions, Mission, SaveMissionInput, updateMission } from "./api/missions";
 import { listUsers, User } from "./api/users";
@@ -171,8 +171,17 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
   const [notice, setNotice] = useState("");
   const [deletingMissionId, setDeletingMissionId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const [missionToDelete, setMissionToDelete] = useState<Mission | null>(null);
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const financialFieldsDisabled = form.situacao !== "normal";
   const isCancelled = form.situacao === "cancelada";
+
+  useEffect(() => {
+    const dialog = deleteDialogRef.current;
+    if (!dialog) return;
+    if (missionToDelete && !dialog.open) dialog.showModal();
+    if (!missionToDelete && dialog.open) dialog.close();
+  }, [missionToDelete]);
 
   const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   const dailyBalances = useMemo(() => getMissionDailyBalances(missions), [missions]);
@@ -332,13 +341,13 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
 
   async function handleDelete(mission: Mission) {
     if (deletingMissionId !== null) return;
-    if (!window.confirm(`Excluir a missão ${mission.numero_ordem_servico}? As diárias desta missão serão removidas do total acumulado.`)) return;
 
     setDeletingMissionId(mission.id_missao);
     setDeleteError("");
     try {
       const response = await deleteMission(mission.id_missao);
       setMissions((current) => current.filter((record) => record.id_missao !== mission.id_missao));
+      setMissionToDelete(null);
       setNotice(response.mensagem);
       window.setTimeout(() => setNotice(""), 5000);
     } catch (error) {
@@ -380,8 +389,6 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
             </div>
           </div>
 
-          {deleteError && <div className="users-feedback error-feedback" role="alert"><span>{deleteError}</span><button type="button" onClick={() => setDeleteError("")}>Fechar</button></div>}
-
           {loading ? (
             <div className="users-loading"><span className="spinner" />Carregando missões...</div>
           ) : loadError ? (
@@ -406,7 +413,7 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
                       <td className="table-actions-column">
                         <div className="mission-table-actions">
                           <button className="edit-user-button" type="button" onClick={() => openEditModal(mission)} disabled={deletingMissionId === mission.id_missao} aria-label={`Editar missão ${mission.numero_ordem_servico}`} title="Editar missão"><EditIcon /></button>
-                          <button className="edit-user-button delete-mission-button" type="button" onClick={() => void handleDelete(mission)} disabled={deletingMissionId !== null} aria-label={`${deletingMissionId === mission.id_missao ? "Excluindo" : "Excluir"} missão ${mission.numero_ordem_servico}`} title="Excluir missão">{deletingMissionId === mission.id_missao ? <span className="spinner" /> : <DeleteIcon />}</button>
+                          <button className="edit-user-button delete-mission-button" type="button" onClick={() => { setDeleteError(""); setMissionToDelete(mission); }} disabled={deletingMissionId !== null} aria-label={`${deletingMissionId === mission.id_missao ? "Excluindo" : "Excluir"} missão ${mission.numero_ordem_servico}`} title="Excluir missão">{deletingMissionId === mission.id_missao ? <span className="spinner" /> : <DeleteIcon />}</button>
                         </div>
                       </td>
                     </tr>
@@ -418,6 +425,31 @@ export default function Missions({ email, onNavigate, onLogout }: MissionsProps)
         </section>
 
         {notice && <div className="toast" role="status">{notice}</div>}
+
+        <dialog
+          ref={deleteDialogRef}
+          className="user-modal delete-user-dialog"
+          aria-labelledby="delete-mission-title"
+          aria-describedby="delete-mission-description"
+          onCancel={(event) => {
+            event.preventDefault();
+            if (deletingMissionId === null) setMissionToDelete(null);
+          }}
+        >
+          {missionToDelete && (
+            <div className="delete-user-content">
+              <h2 id="delete-mission-title">Excluir missão?</h2>
+              <p id="delete-mission-description">Deseja excluir a missão <strong>{missionToDelete.numero_ordem_servico}</strong>? Suas diárias serão removidas do total acumulado. Esta ação não poderá ser desfeita.</p>
+              {deleteError && <p className="form-error" role="alert">{deleteError}</p>}
+              <footer className="delete-user-actions">
+                <button className="cancel-action" type="button" onClick={() => setMissionToDelete(null)} disabled={deletingMissionId !== null} autoFocus>Cancelar</button>
+                <button className="primary-action delete-user-confirm" type="button" onClick={() => void handleDelete(missionToDelete)} disabled={deletingMissionId !== null}>
+                  {deletingMissionId !== null ? <><span className="spinner" />Excluindo...</> : "Excluir"}
+                </button>
+              </footer>
+            </div>
+          )}
+        </dialog>
 
         {modalOpen && (
           <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !saving && setModalOpen(false)}>

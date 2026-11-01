@@ -109,9 +109,24 @@ form {
   box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.14);
 }
 
+.field input:is(:-webkit-autofill, :autofill) {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  box-shadow: inset 0 0 0 1000px #101113;
+}
+
+.field input:is(:-webkit-autofill, :autofill):focus {
+  box-shadow: inset 0 0 0 1000px #101113, 0 0 0 3px rgba(79, 124, 255, 0.14);
+}
+
 .field input:disabled {
   color: var(--text-disabled);
   background: var(--surface-hover);
+}
+
+.field input:is(:-webkit-autofill, :autofill):disabled {
+  -webkit-text-fill-color: var(--text-disabled);
+  box-shadow: inset 0 0 0 1000px var(--surface-hover);
 }
 
 .password-field {
@@ -865,8 +880,8 @@ form {
 
 .week-agenda-grid {
   display: grid;
-  min-width: 840px;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 900px;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
 }
 
 .week-agenda-day {
@@ -1820,6 +1835,64 @@ form {
   border-radius: 12px;
   background: var(--surface);
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+}
+
+.delete-user-dialog {
+  width: min(380px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  padding: 0;
+  color: var(--text);
+}
+
+.delete-user-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.delete-user-content {
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+}
+
+.delete-user-content h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.delete-user-content > p:not(.form-error) {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.delete-user-content > p strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.delete-user-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 4px;
+}
+
+.delete-user-confirm {
+  border-color: #c9443b;
+  background: #c9443b;
+}
+
+.delete-user-confirm:hover:not(:disabled) {
+  border-color: #ad372f;
+  background: #ad372f;
+}
+
+.delete-user-actions .cancel-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .modal-header {

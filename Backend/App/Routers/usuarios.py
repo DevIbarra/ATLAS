@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from App.Data.connection import get_db
 from App.Models.usuarios import usuarios as UsuarioModel
 from App.Schemas.usuarios import CreateUsuarioRequest, UpdateUsuarioRequest
-from App.Service.usuarios import cadastrar_usuario, atualizar_usuario as atualizar_usuario_service
+from App.Service.usuarios import cadastrar_usuario, atualizar_usuario as atualizar_usuario_service, excluir_usuario
 
 
 router = APIRouter(
@@ -38,4 +38,13 @@ def atualizar_usuario(id_usuario: int, dados: UpdateUsuarioRequest, db: Session 
     return {
         "mensagem": "Usuário atualizado com sucesso!",
         "usuario": usuario
+    }
+
+# DELETA USUÁRIO
+@router.delete("/deletar/{id_usuario}")
+def deletar_usuario(id_usuario: int, db: Session = Depends(get_db)):
+    excluir_usuario(id_usuario=id_usuario, db=db)
+
+    return {
+        "mensagem": "Usuário deletado com sucesso!"
     }

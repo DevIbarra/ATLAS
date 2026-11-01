@@ -1,10 +1,11 @@
 from fastapi import HTTPException, status
 
-from sqlalchemy import select, or_
+from sqlalchemy import delete, select, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from App.Models.usuarios import usuarios
+from App.Models.login import Login
 from App.Schemas.usuarios import CreateUsuarioRequest, UpdateUsuarioRequest
 
 
@@ -86,3 +87,24 @@ def atualizar_usuario(id_usuario: int, dados: UpdateUsuarioRequest, db: Session)
         )
 
     return usuario_db
+
+
+def excluir_usuario(id_usuario: int, db: Session):
+    usuario_db = db.get(usuarios, id_usuario)
+
+    if not usuario_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado.",
+        )
+
+    try:
+        db.execute(delete(Login).where(Login.id_user == id_usuario))
+        db.delete(usuario_db)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Não foi possível excluir o usuário devido a outros registros vinculados.",
+        )

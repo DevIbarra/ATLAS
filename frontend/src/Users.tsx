@@ -1,7 +1,7 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout, { DashboardPage } from "./DashboardLayout";
 import { createUserLogin } from "./api/auth";
-import { createUser, CreateUserInput, listUsers, updateUser, User } from "./api/users";
+import { createUser, CreateUserInput, deleteUser, listUsers, updateUser, User } from "./api/users";
 
 type UsersProps = {
   email: string;
@@ -37,6 +37,10 @@ function EditIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 20 4.2-1 10.4-10.4a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /><path d="m13.8 7.4 3 3" stroke="currentColor" strokeWidth="1.7" /></svg>;
 }
 
+function DeleteIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
 function FieldMessage({ message }: { message?: string }) {
   return message ? <small className="field-validation">{message}</small> : null;
 }
@@ -64,6 +68,10 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
   const [accessEmail, setAccessEmail] = useState("");
   const [accessPassword, setAccessPassword] = useState("");
   const [notice, setNotice] = useState<{ message: string; type: "success" | "warning" } | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
 
   async function loadUsers() {
     setLoading(true);
@@ -80,6 +88,13 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
   useEffect(() => {
     void loadUsers();
   }, []);
+
+  useEffect(() => {
+    const dialog = deleteDialogRef.current;
+    if (!dialog) return;
+    if (userToDelete && !dialog.open) dialog.showModal();
+    if (!userToDelete && dialog.open) dialog.close();
+  }, [userToDelete]);
 
   const filteredUsers = useMemo(() => {
     const term = query.trim().toLocaleLowerCase("pt-BR");
@@ -219,6 +234,24 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
     }
   }
 
+  async function handleDelete(user: User) {
+    if (deletingUserId !== null) return;
+
+    setDeletingUserId(user.id_user);
+    setDeleteError("");
+    try {
+      const response = await deleteUser(user.id_user);
+      setUsers((current) => current.filter((record) => record.id_user !== user.id_user));
+      setUserToDelete(null);
+      setNotice({ message: response.mensagem, type: "success" });
+      window.setTimeout(() => setNotice(null), 5000);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Não foi possível excluir o usuário.");
+    } finally {
+      setDeletingUserId(null);
+    }
+  }
+
   return (
     <DashboardLayout activePage="users" email={email} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="dashboard-main users-main">
@@ -299,15 +332,28 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
                       <td><span className={`profile-tag ${isAdministrator(user.tipo_user) ? "profile-tag-admin" : "profile-tag-user"}`}>{user.tipo_user}</span></td>
                       <td><span className={`user-status ${user.ativo ? "is-active" : "is-inactive"}`}><i />{user.ativo ? "Ativo" : "Inativo"}</span></td>
                       <td className="table-actions-column">
-                        <button
-                          className="edit-user-button"
-                          type="button"
-                          onClick={() => openEditModal(user)}
-                          aria-label={`Editar ${user.nome_guerra}`}
-                          title="Editar usuário"
-                        >
-                          <EditIcon />
-                        </button>
+                        <div className="mission-table-actions">
+                          <button
+                            className="edit-user-button"
+                            type="button"
+                            onClick={() => openEditModal(user)}
+                            disabled={deletingUserId === user.id_user}
+                            aria-label={`Editar ${user.nome_guerra}`}
+                            title="Editar usuário"
+                          >
+                            <EditIcon />
+                          </button>
+                          <button
+                            className="edit-user-button delete-mission-button"
+                            type="button"
+                            onClick={() => { setDeleteError(""); setUserToDelete(user); }}
+                            disabled={deletingUserId !== null}
+                            aria-label={`${deletingUserId === user.id_user ? "Excluindo" : "Excluir"} ${user.nome_guerra}`}
+                            title="Excluir usuário"
+                          >
+                            {deletingUserId === user.id_user ? <span className="spinner" /> : <DeleteIcon />}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -318,6 +364,31 @@ export default function Users({ email, onNavigate, onLogout }: UsersProps) {
         </section>
 
         {notice && <div className={`toast toast-${notice.type}`} role="status">{notice.message}</div>}
+
+        <dialog
+          ref={deleteDialogRef}
+          className="user-modal delete-user-dialog"
+          aria-labelledby="delete-user-title"
+          aria-describedby="delete-user-description"
+          onCancel={(event) => {
+            event.preventDefault();
+            if (deletingUserId === null) setUserToDelete(null);
+          }}
+        >
+          {userToDelete && (
+            <div className="delete-user-content">
+              <h2 id="delete-user-title">Excluir usuário?</h2>
+              <p id="delete-user-description">Deseja excluir <strong>{userToDelete.nome_completo}</strong>? Esta ação não poderá ser desfeita.</p>
+              {deleteError && <p className="form-error" role="alert">{deleteError}</p>}
+              <footer className="delete-user-actions">
+                <button className="cancel-action" type="button" onClick={() => setUserToDelete(null)} disabled={deletingUserId !== null} autoFocus>Cancelar</button>
+                <button className="primary-action delete-user-confirm" type="button" onClick={() => void handleDelete(userToDelete)} disabled={deletingUserId !== null}>
+                  {deletingUserId !== null ? <><span className="spinner" />Excluindo...</> : "Excluir"}
+                </button>
+              </footer>
+            </div>
+          )}
+        </dialog>
 
         {modalOpen && (
           <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setModalOpen(false)}>

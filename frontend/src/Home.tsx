@@ -11,6 +11,8 @@ type HomeProps = {
   onLogout: () => void;
 };
 
+const AGENDA_DAY_COUNT = 10;
+
 function localDateValue(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -53,10 +55,10 @@ export default function Home({ email, onNavigate, onLogout }: HomeProps) {
     ? Math.min(100, Math.max(0, Math.round((availableBudget / totalBudget) * 100)))
     : 0;
   const budgetSummaries = getBudgetBalances(budgets, missions);
-  const weekStart = new Date(`${today}T00:00:00`);
-  const weekAgendaDays = Array.from({ length: 7 }, (_, index) => {
-    const dayDate = new Date(weekStart);
-    dayDate.setDate(weekStart.getDate() + index);
+  const agendaStart = new Date(`${today}T00:00:00`);
+  const agendaDays = Array.from({ length: AGENDA_DAY_COUNT }, (_, index) => {
+    const dayDate = new Date(agendaStart);
+    dayDate.setDate(agendaStart.getDate() + index);
     const iso = localDateValue(dayDate);
     return {
       iso,
@@ -65,7 +67,7 @@ export default function Home({ email, onNavigate, onLogout }: HomeProps) {
       missions: activeMissions.filter((mission) => mission.data_missao === iso),
     };
   });
-  const weekMissionCount = weekAgendaDays.reduce((total, day) => total + day.missions.length, 0);
+  const agendaMissionCount = agendaDays.reduce((total, day) => total + day.missions.length, 0);
 
   async function loadDashboardData() {
     setLoading(true);
@@ -122,13 +124,13 @@ export default function Home({ email, onNavigate, onLogout }: HomeProps) {
           <>
             <section className="week-agenda-section week-agenda-section-top" aria-labelledby="week-agenda-title">
               <div className="minimal-section-header">
-                <h2 id="week-agenda-title">Próximos 7 dias</h2>
-                <span>{weekMissionCount} missão{weekMissionCount === 1 ? "" : "ões"}</span>
+                <h2 id="week-agenda-title">Próximos {AGENDA_DAY_COUNT} dias</h2>
+                <span>{agendaMissionCount} missão{agendaMissionCount === 1 ? "" : "ões"}</span>
               </div>
 
               <div className="week-agenda-wrap">
                 <div className="week-agenda-grid">
-                  {weekAgendaDays.map((day) => (
+                  {agendaDays.map((day) => (
                     <article className={`week-agenda-day ${day.iso === today ? "is-today" : ""}`} key={day.iso}>
                       <header>
                         <span>{day.weekday}</span>

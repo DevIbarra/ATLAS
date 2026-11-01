@@ -77,3 +77,17 @@ export async function updateUser(id: number, data: CreateUserInput): Promise<{ m
 
   return parseResponse<{ mensagem: string; usuario: User }>(response);
 }
+
+export async function deleteUser(id: number): Promise<{ mensagem: string }> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${USERS_URL}/deletar/${id}`, { method: "DELETE" });
+  } catch {
+    throw new Error("Não foi possível conectar ao serviço de usuários.");
+  }
+
+  const result = await parseResponse<{ mensagem: string }>(response);
+  if (result?.mensagem === "Usuário não encontrado.") throw new Error(result.mensagem);
+  return result;
+}
