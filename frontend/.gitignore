@@ -1,5 +1,14 @@
-node_modules/
-dist/
+# Variáveis de ambiente
 .env
-.env.local
-*.log
+.env.*
+!.env.example
+
+
+# Dependências
+node_modules/
+
+# Build
+dist/
+
+# Testes (não versionar)
+/tests/

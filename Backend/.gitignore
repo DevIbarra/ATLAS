@@ -1,7 +1,17 @@
+# Variáveis de ambiente
 .env
+.env.*
+!.env.example
+
+# Ambiente virtual
 venv/
-/venv
+.venv/
+
+# Cache Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Testes
+/tests/
