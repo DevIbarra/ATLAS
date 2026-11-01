@@ -73,3 +73,18 @@ export async function updateBudget(id: number, data: CreateBudgetInput): Promise
   if (!response.ok) throw new Error(errorMessage(payload, response.status));
   return payload as { mensagem: string; orcamento: Budget };
 }
+
+export async function deleteBudget(id: number): Promise<{ mensagem: string }> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${BUDGET_URL}/deletar/${id}`, { method: "DELETE" });
+  } catch {
+    throw new Error("Não foi possível conectar ao serviço de orçamento.");
+  }
+
+  const payload = (await response.json().catch(() => null)) as ({ mensagem: string } & ApiError) | null;
+  if (!response.ok) throw new Error(errorMessage(payload, response.status));
+  if (typeof payload?.mensagem !== "string") throw new Error("Resposta inválida do serviço de orçamento.");
+  return payload;
+}

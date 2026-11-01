@@ -1,6 +1,6 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout, { DashboardPage } from "./DashboardLayout";
-import { Budget as BudgetRecord, createBudget, listBudgets, updateBudget } from "./api/budget";
+import { Budget as BudgetRecord, createBudget, deleteBudget, listBudgets, updateBudget } from "./api/budget";
 import { listMissions, Mission } from "./api/missions";
 import { getMissionExpense } from "./missionStatus";
 
@@ -20,6 +20,10 @@ function CloseIcon() {
 
 function EditIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 20 4.2-1 10.4-10.4a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /><path d="m13.8 7.4 3 3" stroke="currentColor" strokeWidth="1.7" /></svg>;
+}
+
+function DeleteIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
 function SearchIcon() {
@@ -59,6 +63,17 @@ export default function Budget({ email, onNavigate, onLogout }: BudgetProps) {
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
+  const [budgetToDelete, setBudgetToDelete] = useState<BudgetRecord | null>(null);
+  const [deletingBudgetId, setDeletingBudgetId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = deleteDialogRef.current;
+    if (!dialog) return;
+    if (budgetToDelete && !dialog.open) dialog.showModal();
+    if (!budgetToDelete && dialog.open) dialog.close();
+  }, [budgetToDelete]);
 
   const currency = new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -163,6 +178,23 @@ export default function Budget({ email, onNavigate, onLogout }: BudgetProps) {
     }
   }
 
+  async function handleDelete(budget: BudgetRecord) {
+    if (deletingBudgetId !== null) return;
+    setDeletingBudgetId(budget.id);
+    setDeleteError("");
+    try {
+      const response = await deleteBudget(budget.id);
+      setBudgets((current) => current.filter((record) => record.id !== budget.id));
+      setBudgetToDelete(null);
+      setNotice(response.mensagem);
+      window.setTimeout(() => setNotice(""), 5000);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Não foi possível excluir o orçamento.");
+    } finally {
+      setDeletingBudgetId(null);
+    }
+  }
+
   return (
     <DashboardLayout activePage="budget" email={email} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="dashboard-main users-main budget-main">
@@ -235,15 +267,28 @@ export default function Budget({ email, onNavigate, onLogout }: BudgetProps) {
                       </td>
                       <td className="budget-table-value">{currency.format(Number(budget.valor))}</td>
                       <td className="table-actions-column">
-                        <button
-                          className="edit-user-button"
-                          type="button"
-                          onClick={() => openEditModal(budget)}
-                          aria-label={`Editar ${budget.nome}`}
-                          title="Editar orçamento"
-                        >
-                          <EditIcon />
-                        </button>
+                        <div className="mission-table-actions">
+                          <button
+                            className="edit-user-button"
+                            type="button"
+                            onClick={() => openEditModal(budget)}
+                            disabled={deletingBudgetId === budget.id}
+                            aria-label={`Editar ${budget.nome}`}
+                            title="Editar orçamento"
+                          >
+                            <EditIcon />
+                          </button>
+                          <button
+                            className="edit-user-button delete-mission-button"
+                            type="button"
+                            onClick={() => { setDeleteError(""); setBudgetToDelete(budget); }}
+                            disabled={deletingBudgetId !== null}
+                            aria-label={`${deletingBudgetId === budget.id ? "Excluindo" : "Excluir"} ${budget.nome}`}
+                            title="Excluir orçamento"
+                          >
+                            {deletingBudgetId === budget.id ? <span className="spinner" /> : <DeleteIcon />}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -254,6 +299,31 @@ export default function Budget({ email, onNavigate, onLogout }: BudgetProps) {
         </section>
 
         {notice && <div className="toast" role="status">{notice}</div>}
+
+        <dialog
+          ref={deleteDialogRef}
+          className="user-modal delete-user-dialog"
+          aria-labelledby="delete-budget-title"
+          aria-describedby="delete-budget-description"
+          onCancel={(event) => {
+            event.preventDefault();
+            if (deletingBudgetId === null) setBudgetToDelete(null);
+          }}
+        >
+          {budgetToDelete && (
+            <div className="delete-user-content">
+              <h2 id="delete-budget-title">Excluir orçamento?</h2>
+              <p id="delete-budget-description">Deseja excluir <strong>{budgetToDelete.nome}</strong>? Esta ação não poderá ser desfeita.</p>
+              {deleteError && <p className="form-error" role="alert">{deleteError}</p>}
+              <footer className="delete-user-actions">
+                <button className="cancel-action" type="button" onClick={() => setBudgetToDelete(null)} disabled={deletingBudgetId !== null} autoFocus>Cancelar</button>
+                <button className="primary-action delete-user-confirm" type="button" onClick={() => void handleDelete(budgetToDelete)} disabled={deletingBudgetId !== null}>
+                  {deletingBudgetId !== null ? <><span className="spinner" />Excluindo...</> : "Excluir"}
+                </button>
+              </footer>
+            </div>
+          )}
+        </dialog>
 
         {modalOpen && (
           <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !saving && setModalOpen(false)}>

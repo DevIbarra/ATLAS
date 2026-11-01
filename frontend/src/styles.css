@@ -20,6 +20,31 @@
 
 * {
   box-sizing: border-box;
+  scrollbar-color: #4b4c56 var(--surface);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid var(--surface);
+  border-radius: 8px;
+  background: #4b4c56;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #686a76;
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--surface);
 }
 
 html,
@@ -1840,26 +1865,6 @@ form {
 .user-edit-modal {
   max-height: calc(100vh - 60px);
   overflow-y: auto;
-  scrollbar-color: #4b4c56 var(--surface);
-  scrollbar-width: thin;
-}
-
-.user-edit-modal::-webkit-scrollbar {
-  width: 8px;
-}
-
-.user-edit-modal::-webkit-scrollbar-track {
-  background: var(--surface);
-}
-
-.user-edit-modal::-webkit-scrollbar-thumb {
-  border: 2px solid var(--surface);
-  border-radius: 8px;
-  background: #4b4c56;
-}
-
-.user-edit-modal::-webkit-scrollbar-thumb:hover {
-  background: #686a76;
 }
 
 .delete-user-dialog {

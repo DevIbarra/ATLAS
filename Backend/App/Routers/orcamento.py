@@ -55,3 +55,20 @@ def atualizar_orcamento(id_orcamento: int, dados: UpdateOrcamentoRequest, db: Se
 def listar_orcamentos(db: Session = Depends(get_db)):
     orcamentos = db.query(OrcamentoModel).all()
     return {"orcamentos": orcamentos}
+
+
+# DELETAR ORÇAMENTO
+@router.delete("/deletar/{id_orcamento}")
+def deletar_orcamento(id_orcamento: int, db: Session = Depends(get_db)):
+    orcamento = db.query(OrcamentoModel).filter(OrcamentoModel.id == id_orcamento).first()
+
+    if not orcamento:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Orçamento não encontrado.",
+        )
+
+    db.delete(orcamento)
+    db.commit()
+
+    return {"mensagem": "Orçamento deletado com sucesso!"}
